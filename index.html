@@ -3,106 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حلبة الاستراتيجيات (v19.1 - مصحح)</title>
+    <title>تطبيق التداول AI (v22.0)</title>
     
-    <!-- تم نقل تحميل المكتبة إلى هنا لضمان تحميلها أولاً -->
+    <!-- 1. استيراد مكتبات الذكاء الاصطناعي والمؤشرات -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js"></script>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
+    <link id="manifest-link" rel="manifest">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* ... نفس الأنماط السابقة ... */
-        :root {
-            --bg-color: #131722; --card-color: #1e222d; --text-color: #d1d4dc;
-            --primary-color: #2962ff; --buy-color: #26a69a; --sell-color: #ef5350;
-            --border-color: #434651; --winner-color: #ffd700;
-        }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color ); color: var(--text-color); padding: 20px; }
-        .container { width: 100%; max-width: 1200px; margin: auto; }
-        header { text-align: center; margin-bottom: 20px; }
-        .card { background-color: var(--card-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; }
-        
-        #arena { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .strategy-card { border-top: 5px solid var(--primary-color); }
-        .strategy-card.winner { border-top-color: var(--winner-color); box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
-        .strategy-card.loser { border-top-color: var(--sell-color); opacity: 0.6; }
-        .strategy-card h3 { margin-top: 0; }
-        .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; }
-        .report-item h4 { color: #8a8d95; margin: 0 0 5px 0; font-size: 0.9rem; }
-        .report-item p { margin: 0; font-size: 1.4rem; font-weight: bold; }
-        .buy { color: var(--buy-color); }
-        .sell { color: var(--sell-color); }
-        #start-btn { display: block; width: 100%; padding: 15px; font-size: 1.2rem; background-color: var(--primary-color); border: none; border-radius: 8px; color: white; cursor: pointer; margin-bottom: 20px; }
-        #final-decision { text-align: center; margin-top: 30px; padding: 20px; border-radius: 8px; background-color: #2a2e39; }
+        :root { --bg-color: #131722; --card-color: #1e222d; --text-color: #d1d4dc; --primary-color: #2962ff; --ai-color: #9c27b0; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color ); color: var(--text-color); margin: 0; padding: 20px; }
+        .container { width: 100%; max-width: 800px; margin: auto; }
+        .card { background-color: var(--card-color); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
         .hidden { display: none; }
+        #installer { text-align: center; }
+        #progress-bar-container { width: 100%; background-color: #333; border-radius: 5px; margin: 15px 0; }
+        #progress-bar { width: 0%; height: 25px; background-color: var(--ai-color); border-radius: 5px; transition: width 0.3s; text-align: center; line-height: 25px; }
+        #progress-details { font-size: 0.9rem; color: #aaa; }
+        .btn { padding: 10px 20px; font-size: 1rem; background-color: var(--primary-color); border: none; border-radius: 6px; color: white; cursor: pointer; margin: 5px; }
+        .btn:disabled { background-color: #555; }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>حلبة الاستراتيجيات (v19.1 - مصحح)</h1>
-            <p>اختبار موضوعي لعدة استراتيجيات على بيانات تاريخية واختيار الأفضل فقط.</p>
+        <header style="text-align: center; margin-bottom: 20px;">
+            <h1>تطبيق التداول AI (v22.0)</h1>
+            <p>يستخدم الذكاء الاصطناعي للتعلم والتنبؤ بالفرص</p>
         </header>
 
-        <!-- قسم التحميل الجديد -->
-        <div id="loader" class="card" style="text-align: center;">
-            <p>جاري تحميل المكتبات المطلوبة...</p>
+        <div id="installer" class="card">
+            <h2>جاري إعداد العقل الاصطناعي...</h2>
+            <p>هذه العملية تحدث مرة واحدة فقط وقد تستغرق بضع دقائق.</p>
+            <div id="progress-bar-container"><div id="progress-bar">0%</div></div>
+            <p id="progress-details">الخطوة 1/3: تحميل البيانات التاريخية...</p>
         </div>
 
-        <button id="start-btn" class="hidden">بدء المنافسة</button>
-
-        <div id="arena">
-            <!-- سيتم إنشاء بطاقات الاستراتيجيات هنا -->
-        </div>
-
-        <div id="final-decision" class="card hidden">
-            <h2>القرار النهائي</h2>
-            <p id="decision-text"></p>
+        <div id="app" class="card hidden">
+            <h2>النموذج جاهز ويعمل</h2>
+            <p>التطبيق الآن يستخدم نموذجا مدرباً لتحليل السوق في الخلفية.</p>
+            <button id="notify-btn" class="btn">1. طلب إذن الإشعارات</button>
+            <button id="sync-btn" class="btn" disabled>2. تشغيل التنبؤ الآن (للتجربة)</button>
+            <p id="app-status" style="margin-top: 15px;">الحالة: في انتظار الأوامر...</p>
         </div>
     </div>
 
     <script>
-        // --- JavaScript Logic (v19.1 - The Bug Fixer) ---
+        // --- الجزء الأول: منطق الواجهة (app.js سابقاً) ---
+        const installerDiv = document.getElementById('installer');
+        const appDiv = document.getElementById('app');
+        const progressBar = document.getElementById('progress-bar');
+        const progressDetails = document.getElementById('progress-details');
+        const notifyBtn = document.getElementById('notify-btn');
+        const syncBtn = document.getElementById('sync-btn');
+        const appStatus = document.getElementById('app-status');
 
-        const startBtn = document.getElementById('start-btn');
-        const loaderDiv = document.getElementById('loader');
+        // --- الجزء الثاني: كود الـ Service Worker المضمن ---
+        const serviceWorkerCode = `
+            importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js' );
+            importScripts('https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js' );
 
-        // --- الحارس الجديد: التأكد من تحميل المكتبة ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const checkLibrary = setInterval(() => {
-                // التحقق مما إذا كان الكائن 'technicalindicators' موجوداً في النافذة
-                if (typeof technicalindicators !== 'undefined') {
-                    clearInterval(checkLibrary); // أوقف التحقق
-                    loaderDiv.classList.add('hidden'); // أخفِ رسالة التحميل
-                    startBtn.classList.remove('hidden'); // أظهر زر البدء
-                    console.log("تم تحميل مكتبة المؤشرات بنجاح.");
+            const MODEL_DB_NAME = 'trading-ai-model';
+            const MODEL_STORE_NAME = 'model-store';
+            const MODEL_KEY = 'btc-4h-model';
+
+            self.addEventListener('install', e => self.skipWaiting());
+            self.addEventListener('activate', e => self.clients.claim());
+
+            self.addEventListener('message', async (event) => {
+                if (event.data.type === 'train') {
+                    console.log('SW: تلقى أمر التدريب...');
+                    await trainAndSaveModel(event.data.klines);
+                    event.source.postMessage({ type: 'training_complete' });
+                } else if (event.data.type === 'predict') {
+                    console.log('SW: تلقى أمر التنبؤ...');
+                    await performPrediction();
                 }
-            }, 100); // تحقق كل 100 ميللي ثانية
+            });
+
+            // --- 1. التدريب وحفظ النموذج ---
+            async function trainAndSaveModel(klines) {
+                console.log('SW: بدء معالجة البيانات للتدريب...');
+                const { features, labels } = createTrainingData(klines);
+                const [X, Y] = [tf.tensor2d(features), tf.tensor2d(labels)];
+
+                console.log('SW: بدء تدريب النموذج...');
+                const model = createModel(features[0].length);
+                await model.fit(X, Y, {
+                    epochs: 20,
+                    batchSize: 32,
+                    shuffle: true,
+                    callbacks: { onEpochEnd: (epoch, logs) => console.log(\`Epoch \${epoch + 1}: loss = \${logs.loss.toFixed(4)}\`) }
+                });
+
+                console.log('SW: تم الانتهاء من التدريب. جاري حفظ النموذج...');
+                await model.save(\`indexeddb://\${MODEL_KEY}\`);
+                console.log('SW: تم حفظ النموذج في IndexedDB.');
+            }
+
+            // --- 2. التنبؤ باستخدام النموذج المحفوظ ---
+            async function performPrediction() {
+                try {
+                    console.log('SW: تحميل النموذج من IndexedDB...');
+                    const model = await tf.loadLayersModel(\`indexeddb://\${MODEL_KEY}\`);
+                    
+                    console.log('SW: جلب أحدث البيانات للتنبؤ...');
+                    const klines = await getHistoricalData('BTCUSDT', '4h', 100);
+                    const latestFeatures = getFeaturesForPrediction(klines);
+                    const predictionTensor = model.predict(tf.tensor2d([latestFeatures]));
+                    const prediction = await predictionTensor.data();
+                    
+                    const confidence = prediction[0] * 100;
+                    console.log(\`SW: نتيجة التنبؤ: \${confidence.toFixed(2)}%\`);
+
+                    if (confidence > 70) { // عتبة الثقة
+                        const title = \`فرصة شراء محتملة (ثقة \${confidence.toFixed(0)}%)\`;
+                        const options = { body: 'نموذج الذكاء الاصطناعي يتوقع حركة صعودية لـ BTCUSDT.' };
+                        await self.registration.showNotification(title, options);
+                    }
+                } catch (error) {
+                    console.error('SW: فشل التنبؤ:', error);
+                    await self.registration.showNotification('خطأ في التنبؤ', { body: 'لم يتم العثور على نموذج مدرب. يرجى إعادة تثبيت التطبيق.' });
+                }
+            }
+            
+            // --- 3. دوال مساعدة للتعلم الآلي ---
+            function createModel(inputShape) {
+                const model = tf.sequential();
+                model.add(tf.layers.dense({ inputShape: [inputShape], units: 32, activation: 'relu' }));
+                model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
+                model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' })); // Sigmoid for probability output (0 to 1)
+                model.compile({ optimizer: 'adam', loss: 'binaryCrossentropy' });
+                return model;
+            }
+
+            function createTrainingData(klines) {
+                const features = [];
+                const labels = [];
+                const lookahead = 5; // نتنبأ بما إذا كان السعر سيرتفع بعد 5 شمعات
+
+                for (let i = 50; i < klines.length - lookahead; i++) {
+                    const featureSet = getFeaturesForPrediction(klines.slice(0, i + 1));
+                    features.push(featureSet);
+
+                    const futurePrice = klines[i + lookahead].close;
+                    const currentPrice = klines[i].close;
+                    labels.push([futurePrice > currentPrice ? 1 : 0]); // 1 for up, 0 for down
+                }
+                return { features, labels };
+            }
+
+            function getFeaturesForPrediction(klines) {
+                const closes = klines.map(k => k.close);
+                const rsi = technicalindicators.rsi({ values: closes, period: 14 });
+                const macd = technicalindicators.macd({ values: closes, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+                const stc = technicalindicators.stc({values: closes, fastPeriod:12, slowPeriod:26, kPeriod:10, dPeriod:3, signalPeriod:3});
+
+                return [
+                    rsi.slice(-1)[0] / 100, // Normalize
+                    macd.slice(-1)[0].MACD / closes.slice(-1)[0], // Normalize
+                    stc.slice(-1)[0] / 100 // Normalize
+                ];
+            }
+
+            async function getHistoricalData(symbol, interval, limit) { const url = \`https://api.binance.com/api/v3/klines?symbol=\${symbol}&interval=\${interval}&limit=\${limit}\`; const response = await fetch(url ); if (!response.ok) throw new Error(\`Failed to fetch \${interval} data.\`); const data = await response.json(); return data.map(k => ({ close: parseFloat(k[4]) })); }
+        `;
+
+        // --- الجزء الثالث: دمج كل شيء ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... (كود إنشاء Manifest المضمن كما في السابق) ...
+            const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="#9c27b0" d="M50 10L61.2 35.4H88.8L68.8 51.2L79.4 76.6L50 60.8L20.6 76.6L31.2 51.2L11.2 35.4H38.8z"/></svg>`;
+            const manifest = { name: "تطبيق التداول AI", short_name: "AI Trade", start_url: ".", display: "standalone", background_color: "#131722", theme_color: "#1e222d", icons: [{ src: `data:image/svg+xml;base64,${btoa(svgIcon )}`, sizes: "192x192 512x512", type: "image/svg+xml" }] };
+            document.getElementById('manifest-link').href = `data:application/json;base64,${btoa(JSON.stringify(manifest))}`;
+
+            // تسجيل الـ Service Worker
+            if ('serviceWorker' in navigator) {
+                const blob = new Blob([serviceWorkerCode], { type: 'application/javascript' });
+                const swURL = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swURL)
+                    .then(reg => {
+                        console.log('AI Service Worker مسجل.');
+                        if (!localStorage.getItem('ai_app_installed_v22')) runInstallation(reg);
+                        else showApp();
+                    }).catch(err => console.log('فشل تسجيل AI SW:', err));
+            }
         });
 
-        // باقي الكود يبقى كما هو تماماً
-        const strategies = [
-            { id: 'conservative_trader', name: '1. المتداول المتحفظ (الكاملة)', description: 'تستخدم جميع الفلاتر: الاتجاه، الزخم، السيولة، والتقلب.', logic: analyzeConservative, report: {} },
-            { id: 'trend_rider', name: '2. متداول الاتجاه السريع', description: 'تعتمد على توافق الاتجاه والزخم فقط. صفقات أكثر.', logic: analyzeTrendRider, report: {} },
-            { id: 'reversal_hunter', name: '3. صائد الانعكاسات (RSI)', description: 'تشتري عند ذروة البيع وتبيع عند ذروة الشراء.', logic: analyzeReversalHunter, report: {} }
-        ];
-        const arenaDiv = document.getElementById('arena');
-        const finalDecisionDiv = document.getElementById('final-decision');
-        startBtn.addEventListener('click', runCompetition);
-        async function runCompetition() { this.textContent = 'جاري الاختبار...'; this.disabled = true; try { const dailyKlines = await getHistoricalData('BTCUSDT', '1d', 1000); const h4Klines = await getHistoricalData('BTCUSDT', '4h', 1000); for (const strategy of strategies) { const report = await runBacktest(h4Klines, dailyKlines, strategy.logic); strategy.report = report; } displayResults(); } catch (error) { alert(`حدث خطأ: ${error.message}`); this.textContent = 'بدء المنافسة'; this.disabled = false; } }
-        function displayResults() { arenaDiv.innerHTML = ''; let bestStrategy = strategies[0]; for (const strategy of strategies) { if (strategy.report.netProfit > bestStrategy.report.netProfit) { bestStrategy = strategy; } } for (const strategy of strategies) { const isWinner = strategy.id === bestStrategy.id; const isLoser = !isWinner && strategy.report.netProfit < 0; const card = document.createElement('div'); card.className = `card strategy-card ${isWinner ? 'winner' : ''} ${isLoser ? 'loser' : ''}`; const report = strategy.report; card.innerHTML = `<h3>${strategy.name}</h3><p style="font-size:0.8rem; color:#aaa;">${strategy.description}</p><hr style="border-color: #434651;"><div class="report-grid"><div class="report-item"><h4>إجمالي الصفقات</h4><p>${report.totalTrades}</p></div><div class="report-item"><h4>نسبة النجاح</h4><p>${report.winRate}%</p></div><div class="report-item"><h4>الربح/الخسارة (كنسبة)</h4><p class="${report.netProfit >= 0 ? 'buy' : 'sell'}">${(report.netProfit * 100).toFixed(2)}%</p></div><div class="report-item"><h4>عامل الربح</h4><p>${report.profitFactor}</p></div></div>`; arenaDiv.appendChild(card); } finalDecisionDiv.classList.remove('hidden'); const decisionText = document.getElementById('decision-text'); if (bestStrategy.report.netProfit > 0) { decisionText.innerHTML = `**الاستراتيجية الفائزة هي "${bestStrategy.name}".**   
- لقد أثبتت أنها الأكثر ربحية على البيانات التاريخية. سيتم اعتماد هذه الاستراتيجية وحذف الاستراتيجيات الأخرى الفاشلة من الإصدارات القادمة.`; } else { decisionText.innerHTML = `**تحذير: لم تنجح أي استراتيجية في تحقيق ربح.**   
- جميع الاستراتيجيات التي تم اختبارها أدت إلى خسارة. هذا يعني أن ظروف السوق الحالية غير مناسبة لهذه الأنظمة ويجب إعادة النظر فيها بالكامل.`; } }
-        function analyzeConservative(h4Klines, dailyKlines) { const params = { ciPeriod: 14, cmfPeriod: 20 }; const ciValues = choppinessIndex(h4Klines, params.ciPeriod); if (ciValues[ciValues.length - 1] > 61.8) return { tradeType: "محايد" }; const dailyCloses = dailyKlines.map(k => k.close); const hma55 = hma(dailyCloses, 55); const dailyTrend = dailyCloses[dailyCloses.length - 1] > hma55[hma55.length - 1] ? 'صاعد' : 'هابط'; const h4Closes = h4Klines.map(k => k.close); const superTrend = analyzeSuperTrend(h4Klines); const stcValues = stc(h4Closes, 12, 26, 10); const latestSTC = stcValues[stcValues.length - 1], prevSTC = stcValues[stcValues.length - 2]; const entrySignal = (latestSTC > 25 && prevSTC <= 25), exitSignal = (latestSTC < 75 && prevSTC >= 75); const cmfInput = { high: h4Klines.map(k => k.high), low: h4Klines.map(k => k.low), close: h4Klines.map(k => k.close), volume: h4Klines.map(k => k.volume), period: params.cmfPeriod }; const cmfValues = technicalindicators.chaikinmoneyflow(cmfInput); const latestCMF = cmfValues[cmfValues.length - 1]; if ((entrySignal && latestCMF < 0) || (exitSignal && latestCMF > 0)) return { tradeType: "محايد" }; if (dailyTrend === 'صاعد' && superTrend.trend === 'صاعد' && entrySignal) return { tradeType: "شراء" }; if (dailyTrend === 'هابط' && superTrend.trend === 'هابط' && exitSignal) return { tradeType: "بيع" }; return { tradeType: "محايد" }; }
-        function analyzeTrendRider(h4Klines, dailyKlines) { const dailyCloses = dailyKlines.map(k => k.close); const hma55 = hma(dailyCloses, 55); const dailyTrend = dailyCloses[dailyCloses.length - 1] > hma55[hma55.length - 1] ? 'صاعد' : 'هابط'; const h4Closes = h4Klines.map(k => k.close); const superTrend = analyzeSuperTrend(h4Klines); const stcValues = stc(h4Closes, 12, 26, 10); const latestSTC = stcValues[stcValues.length - 1], prevSTC = stcValues[stcValues.length - 2]; const entrySignal = (latestSTC > 25 && prevSTC <= 25), exitSignal = (latestSTC < 75 && prevSTC >= 75); if (dailyTrend === 'صاعد' && superTrend.trend === 'صاعد' && entrySignal) return { tradeType: "شراء" }; if (dailyTrend === 'هابط' && superTrend.trend === 'هابط' && exitSignal) return { tradeType: "بيع" }; return { tradeType: "محايد" }; }
-        function analyzeReversalHunter(h4Klines, dailyKlines) { const h4Closes = h4Klines.map(k => k.close); const rsi = technicalindicators.rsi({ values: h4Closes, period: 14 }); const latestRSI = rsi[rsi.length - 1]; const prevRSI = rsi[rsi.length - 2]; if (latestRSI > 30 && prevRSI <= 30) return { tradeType: "شراء" }; if (latestRSI < 70 && prevRSI >= 70) return { tradeType: "بيع" }; return { tradeType: "محايد" }; }
-        async function runBacktest(h4Klines, dailyKlines, strategyLogic) { const trades = []; let activeTrade = null; const minAnalysisCandles = 250; for (let i = minAnalysisCandles; i < h4Klines.length; i++) { const currentH4Klines = h4Klines.slice(0, i + 1); const currentCandle = currentH4Klines[currentH4Klines.length - 1]; const correspondingDailyIndex = dailyKlines.findIndex(dk => dk.timestamp >= currentCandle.timestamp) -1; if (correspondingDailyIndex < minAnalysisCandles) continue; const currentDailyKlines = dailyKlines.slice(0, correspondingDailyIndex + 1); if (activeTrade) { let pnl = 0; if (activeTrade.type === 'Long') pnl = (currentCandle.close - activeTrade.entryPoint) / activeTrade.entryPoint; else pnl = (activeTrade.entryPoint - currentCandle.close) / activeTrade.entryPoint; const signal = strategyLogic(currentH4Klines, currentDailyKlines); if ((activeTrade.type === 'Long' && signal.tradeType === 'بيع') || (activeTrade.type === 'بيع' && signal.tradeType === 'شراء')) { trades.push({ pnl }); activeTrade = null; } } if (!activeTrade) { const signal = strategyLogic(currentH4Klines, currentDailyKlines); if (signal.tradeType === 'شراء') activeTrade = { type: 'Long', entryPoint: currentCandle.close }; else if (signal.tradeType === 'بيع') activeTrade = { type: 'Short', entryPoint: currentCandle.close }; } } return generateReport(trades); }
-        function generateReport(trades) { const totalTrades = trades.length; if (totalTrades === 0) return { totalTrades: 0, winRate: "0.00", netProfit: 0, profitFactor: "N/A" }; const winningTrades = trades.filter(t => t.pnl > 0); const losingTrades = trades.filter(t => t.pnl <= 0); const grossProfit = winningTrades.reduce((sum, t) => sum + t.pnl, 0); const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + t.pnl, 0)); const netProfit = grossProfit - grossLoss; const profitFactor = (grossLoss > 0) ? (grossProfit / grossLoss).toFixed(2) : "∞"; return { totalTrades, winRate: ((winningTrades.length / totalTrades) * 100).toFixed(2), netProfit: netProfit, profitFactor: profitFactor }; }
-        async function getHistoricalData(symbol, interval, limit) { const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`; const response = await fetch(url ); if (!response.ok) throw new Error(`فشل جلب بيانات ${interval}.`); const data = await response.json(); return data.map(k => ({ open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]), timestamp: k[0] })); }
-        function hma(data, period) { const wma = technicalindicators.wma; const halfPeriod = Math.floor(period / 2); const sqrtPeriod = Math.floor(Math.sqrt(period)); const wma1 = wma({ period: halfPeriod, values: data }); const wma2 = wma({ period: period, values: data }); const diff = wma1.map((val, index) => { const wma2_val = wma2[index - (halfPeriod - 1)] || 0; return (2 * val) - wma2_val; }); const validDiff = diff.slice(period - halfPeriod); return wma({ period: sqrtPeriod, values: validDiff }); } function stc(data, fastPeriod, slowPeriod, stochPeriod) { const macd = technicalindicators.macd({ values: data, fastPeriod, slowPeriod, signalPeriod: 1, SimpleMAOscillator: false, SimpleMASignal: false }).map(d => d.MACD); const highestMACD = technicalindicators.highest({ values: macd, period: stochPeriod }); const lowestMACD = technicalindicators.lowest({ values: macd, period: stochPeriod }); const stochMACD = macd.map((val, index) => { const H = highestMACD[index - (stochPeriod - 1)] || 0; const L = lowestMACD[index - (stochPeriod - 1)] || 0; return ((val - L) / (H - L)) * 100 || 0; }); const ema = technicalindicators.ema; const ema1 = ema({ period: 3, values: stochMACD }); const ema2 = ema({ period: 3, values: ema1 }); return ema2; } function choppinessIndex(klines, period) { if (klines.length < period) return []; const atr = technicalindicators.atr({ high: klines.map(k=>k.high), low: klines.map(k=>k.low), close: klines.map(k=>k.close), period: 1 }); const results = []; for (let i = period - 1; i < klines.length; i++) { const slice = klines.slice(i - period + 1, i + 1); const atrSum = atr.slice(i - period + 1, i + 1).reduce((sum, val) => sum + val, 0); const highestHigh = Math.max(...slice.map(k => k.high)); const lowestLow = Math.min(...slice.map(k => k.low)); const range = highestHigh - lowestLow; if (range === 0) { results.push(100); continue; } const logTerm = Math.log10(atrSum / range); const periodLog = Math.log10(period); const ci = 100 * (logTerm / periodLog); results.push(ci); } return results; } function analyzeSuperTrend(klines, period = 10, multiplier = 3) { if (klines.length < period) return { trend: 'محايد' }; let atrValues = technicalindicators.atr({ high: klines.map(k => k.high), low: klines.map(k => k.low), close: klines.map(k => k.close), period: period }); let finalUpperBand = 0, finalLowerBand = 0, supertrend = 0, direction = 'صاعد'; for (let i = period; i < klines.length; i++) { let high = klines[i].high, low = klines[i].low, close = klines[i].close, prevClose = klines[i-1].close, atr = atrValues[i - period]; let upperBand = (high + low) / 2 + (multiplier * atr); let lowerBand = (high + low) / 2 - (multiplier * atr); finalUpperBand = (upperBand < finalUpperBand || prevClose > finalUpperBand) ? upperBand : finalUpperBand; finalLowerBand = (lowerBand > finalLowerBand || prevClose < finalLowerBand) ? lowerBand : finalLowerBand; if (supertrend === finalUpperBand) { direction = close > finalUpperBand ? 'صاعد' : 'هابط'; } else { direction = close < finalLowerBand ? 'هابط' : 'صاعد'; } supertrend = (direction === 'صاعد') ? finalLowerBand : finalUpperBand; } const trend = klines[klines.length-1].close > supertrend ? 'صاعد' : 'هابط'; return { trend: trend }; }
+        async function runInstallation(registration) {
+            let progress = 0;
+            
+            // 1. تحميل البيانات
+            updateProgress(progress, "الخطوة 1/3: تحميل البيانات التاريخية للتدريب...");
+            const klines = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=1000` ).then(res => res.json());
+            progress = 33;
+            updateProgress(progress, "الخطوة 2/3: تدريب النموذج (قد يستغرق وقتاً)...");
 
+            // 2. إرسال أمر التدريب إلى SW
+            navigator.serviceWorker.controller.postMessage({ type: 'train', klines: klines.map(k => ({ close: parseFloat(k[4]) })) });
+
+            // 3. انتظار اكتمال التدريب
+            const trainingPromise = new Promise(resolve => {
+                navigator.serviceWorker.onmessage = (event) => {
+                    if (event.data.type === 'training_complete') {
+                        resolve();
+                    }
+                };
+            });
+            await trainingPromise;
+            
+            progress = 100;
+            updateProgress(progress, "اكتمل التدريب! تم حفظ النموذج.");
+            localStorage.setItem('ai_app_installed_v22', 'true');
+            setTimeout(showApp, 1000);
+        }
+
+        function updateProgress(p, details) {
+            progressBar.style.width = `${p}%`;
+            progressBar.textContent = `${p}%`;
+            progressDetails.textContent = details;
+        }
+
+        function showApp() { installerDiv.classList.add('hidden'); appDiv.classList.remove('hidden'); }
+        notifyBtn.addEventListener('click', () => { Notification.requestPermission().then(p => { if (p === 'granted') { appStatus.textContent = "تم منح إذن الإشعارات."; notifyBtn.disabled = true; syncBtn.disabled = false; } }); });
+        syncBtn.addEventListener('click', () => { if (navigator.serviceWorker.controller) { appStatus.textContent = "تم إرسال أمر التنبؤ إلى الخلفية..."; navigator.serviceWorker.controller.postMessage({ type: 'predict' }); } });
     </script>
 </body>
 </html>
