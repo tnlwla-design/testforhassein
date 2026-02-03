@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حلبة الاستراتيجيات (v19.0)</title>
+    <title>حلبة الاستراتيجيات (v19.1 - مصحح)</title>
     
+    <!-- تم نقل تحميل المكتبة إلى هنا لضمان تحميلها أولاً -->
     <script src="https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
+        /* ... نفس الأنماط السابقة ... */
         :root {
             --bg-color: #131722; --card-color: #1e222d; --text-color: #d1d4dc;
             --primary-color: #2962ff; --buy-color: #26a69a; --sell-color: #ef5350;
@@ -34,234 +36,73 @@
         .sell { color: var(--sell-color); }
         #start-btn { display: block; width: 100%; padding: 15px; font-size: 1.2rem; background-color: var(--primary-color); border: none; border-radius: 8px; color: white; cursor: pointer; margin-bottom: 20px; }
         #final-decision { text-align: center; margin-top: 30px; padding: 20px; border-radius: 8px; background-color: #2a2e39; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>حلبة الاستراتيجيات (v19.0)</h1>
+            <h1>حلبة الاستراتيجيات (v19.1 - مصحح)</h1>
             <p>اختبار موضوعي لعدة استراتيجيات على بيانات تاريخية واختيار الأفضل فقط.</p>
         </header>
 
-        <button id="start-btn">بدء المنافسة</button>
+        <!-- قسم التحميل الجديد -->
+        <div id="loader" class="card" style="text-align: center;">
+            <p>جاري تحميل المكتبات المطلوبة...</p>
+        </div>
+
+        <button id="start-btn" class="hidden">بدء المنافسة</button>
 
         <div id="arena">
             <!-- سيتم إنشاء بطاقات الاستراتيجيات هنا -->
         </div>
 
-        <div id="final-decision" class="card" style="display:none;">
+        <div id="final-decision" class="card hidden">
             <h2>القرار النهائي</h2>
             <p id="decision-text"></p>
         </div>
     </div>
 
     <script>
-        // --- JavaScript Logic (v19.0 - The Strategy Arena) ---
-
-        const strategies = [
-            {
-                id: 'conservative_trader',
-                name: '1. المتداول المتحفظ (الكاملة)',
-                description: 'تستخدم جميع الفلاتر: الاتجاه، الزخم، السيولة، والتقلب.',
-                logic: analyzeConservative,
-                report: {}
-            },
-            {
-                id: 'trend_rider',
-                name: '2. متداول الاتجاه السريع',
-                description: 'تعتمد على توافق الاتجاه والزخم فقط. صفقات أكثر.',
-                logic: analyzeTrendRider,
-                report: {}
-            },
-            {
-                id: 'reversal_hunter',
-                name: '3. صائد الانعكاسات (RSI)',
-                description: 'تشتري عند ذروة البيع وتبيع عند ذروة الشراء.',
-                logic: analyzeReversalHunter,
-                report: {}
-            }
-        ];
+        // --- JavaScript Logic (v19.1 - The Bug Fixer) ---
 
         const startBtn = document.getElementById('start-btn');
+        const loaderDiv = document.getElementById('loader');
+
+        // --- الحارس الجديد: التأكد من تحميل المكتبة ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkLibrary = setInterval(() => {
+                // التحقق مما إذا كان الكائن 'technicalindicators' موجوداً في النافذة
+                if (typeof technicalindicators !== 'undefined') {
+                    clearInterval(checkLibrary); // أوقف التحقق
+                    loaderDiv.classList.add('hidden'); // أخفِ رسالة التحميل
+                    startBtn.classList.remove('hidden'); // أظهر زر البدء
+                    console.log("تم تحميل مكتبة المؤشرات بنجاح.");
+                }
+            }, 100); // تحقق كل 100 ميللي ثانية
+        });
+
+        // باقي الكود يبقى كما هو تماماً
+        const strategies = [
+            { id: 'conservative_trader', name: '1. المتداول المتحفظ (الكاملة)', description: 'تستخدم جميع الفلاتر: الاتجاه، الزخم، السيولة، والتقلب.', logic: analyzeConservative, report: {} },
+            { id: 'trend_rider', name: '2. متداول الاتجاه السريع', description: 'تعتمد على توافق الاتجاه والزخم فقط. صفقات أكثر.', logic: analyzeTrendRider, report: {} },
+            { id: 'reversal_hunter', name: '3. صائد الانعكاسات (RSI)', description: 'تشتري عند ذروة البيع وتبيع عند ذروة الشراء.', logic: analyzeReversalHunter, report: {} }
+        ];
         const arenaDiv = document.getElementById('arena');
         const finalDecisionDiv = document.getElementById('final-decision');
-
         startBtn.addEventListener('click', runCompetition);
-
-        // --- محرك المنافسة ---
-        async function runCompetition() {
-            this.textContent = 'جاري الاختبار...';
-            this.disabled = true;
-
-            try {
-                const dailyKlines = await getHistoricalData('BTCUSDT', '1d', 1000);
-                const h4Klines = await getHistoricalData('BTCUSDT', '4h', 1000);
-
-                for (const strategy of strategies) {
-                    const report = await runBacktest(h4Klines, dailyKlines, strategy.logic);
-                    strategy.report = report;
-                }
-
-                displayResults();
-
-            } catch (error) {
-                alert(`حدث خطأ: ${error.message}`);
-                this.textContent = 'بدء المنافسة';
-                this.disabled = false;
-            }
-        }
-
-        // --- عرض النتائج واتخاذ القرار ---
-        function displayResults() {
-            arenaDiv.innerHTML = ''; // مسح المحتوى القديم
-            let bestStrategy = strategies[0];
-
-            for (const strategy of strategies) {
-                if (strategy.report.netProfit > bestStrategy.report.netProfit) {
-                    bestStrategy = strategy;
-                }
-            }
-
-            for (const strategy of strategies) {
-                const isWinner = strategy.id === bestStrategy.id;
-                const isLoser = !isWinner && strategy.report.netProfit < 0;
-
-                const card = document.createElement('div');
-                card.className = `card strategy-card ${isWinner ? 'winner' : ''} ${isLoser ? 'loser' : ''}`;
-                
-                const report = strategy.report;
-                card.innerHTML = `
-                    <h3>${strategy.name}</h3>
-                    <p style="font-size:0.8rem; color:#aaa;">${strategy.description}</p>
-                    <hr style="border-color: #434651;">
-                    <div class="report-grid">
-                        <div class="report-item"><h4>إجمالي الصفقات</h4><p>${report.totalTrades}</p></div>
-                        <div class="report-item"><h4>نسبة النجاح</h4><p>${report.winRate}%</p></div>
-                        <div class="report-item"><h4>الربح/الخسارة (كنسبة)</h4><p class="${report.netProfit >= 0 ? 'buy' : 'sell'}">${(report.netProfit * 100).toFixed(2)}%</p></div>
-                        <div class="report-item"><h4>عامل الربح</h4><p>${report.profitFactor}</p></div>
-                    </div>
-                `;
-                arenaDiv.appendChild(card);
-            }
-
-            // القرار النهائي
-            finalDecisionDiv.style.display = 'block';
-            const decisionText = document.getElementById('decision-text');
-            if (bestStrategy.report.netProfit > 0) {
-                decisionText.innerHTML = `
-                    **الاستراتيجية الفائزة هي "${bestStrategy.name}".**   
-
-                    لقد أثبتت أنها الأكثر ربحية على البيانات التاريخية. 
-                    سيتم اعتماد هذه الاستراتيجية وحذف الاستراتيجيات الأخرى الفاشلة من الإصدارات القادمة.
-                `;
-            } else {
-                decisionText.innerHTML = `
-                    **تحذير: لم تنجح أي استراتيجية في تحقيق ربح.**   
-
-                    جميع الاستراتيجيات التي تم اختبارها أدت إلى خسارة. 
-                    هذا يعني أن ظروف السوق الحالية غير مناسبة لهذه الأنظمة ويجب إعادة النظر فيها بالكامل.
-                `;
-            }
-        }
-
-        // --- تعريف منطق كل استراتيجية ---
-
-        // 1. المتداول المتحفظ
-        function analyzeConservative(h4Klines, dailyKlines) {
-            const params = { ciPeriod: 14, cmfPeriod: 20 };
-            const ciValues = choppinessIndex(h4Klines, params.ciPeriod);
-            if (ciValues[ciValues.length - 1] > 61.8) return { tradeType: "محايد" };
-            const dailyCloses = dailyKlines.map(k => k.close);
-            const hma55 = hma(dailyCloses, 55);
-            const dailyTrend = dailyCloses[dailyCloses.length - 1] > hma55[hma55.length - 1] ? 'صاعد' : 'هابط';
-            const h4Closes = h4Klines.map(k => k.close);
-            const superTrend = analyzeSuperTrend(h4Klines);
-            const stcValues = stc(h4Closes, 12, 26, 10);
-            const latestSTC = stcValues[stcValues.length - 1], prevSTC = stcValues[stcValues.length - 2];
-            const entrySignal = (latestSTC > 25 && prevSTC <= 25), exitSignal = (latestSTC < 75 && prevSTC >= 75);
-            const cmfInput = { high: h4Klines.map(k => k.high), low: h4Klines.map(k => k.low), close: h4Klines.map(k => k.close), volume: h4Klines.map(k => k.volume), period: params.cmfPeriod };
-            const cmfValues = technicalindicators.chaikinmoneyflow(cmfInput);
-            const latestCMF = cmfValues[cmfValues.length - 1];
-            if ((entrySignal && latestCMF < 0) || (exitSignal && latestCMF > 0)) return { tradeType: "محايد" };
-            if (dailyTrend === 'صاعد' && superTrend.trend === 'صاعد' && entrySignal) return { tradeType: "شراء" };
-            if (dailyTrend === 'هابط' && superTrend.trend === 'هابط' && exitSignal) return { tradeType: "بيع" };
-            return { tradeType: "محايد" };
-        }
-
-        // 2. متداول الاتجاه السريع
-        function analyzeTrendRider(h4Klines, dailyKlines) {
-            const dailyCloses = dailyKlines.map(k => k.close);
-            const hma55 = hma(dailyCloses, 55);
-            const dailyTrend = dailyCloses[dailyCloses.length - 1] > hma55[hma55.length - 1] ? 'صاعد' : 'هابط';
-            const h4Closes = h4Klines.map(k => k.close);
-            const superTrend = analyzeSuperTrend(h4Klines);
-            const stcValues = stc(h4Closes, 12, 26, 10);
-            const latestSTC = stcValues[stcValues.length - 1], prevSTC = stcValues[stcValues.length - 2];
-            const entrySignal = (latestSTC > 25 && prevSTC <= 25), exitSignal = (latestSTC < 75 && prevSTC >= 75);
-            if (dailyTrend === 'صاعد' && superTrend.trend === 'صاعد' && entrySignal) return { tradeType: "شراء" };
-            if (dailyTrend === 'هابط' && superTrend.trend === 'هابط' && exitSignal) return { tradeType: "بيع" };
-            return { tradeType: "محايد" };
-        }
-
-        // 3. صائد الانعكاسات
-        function analyzeReversalHunter(h4Klines, dailyKlines) {
-            const h4Closes = h4Klines.map(k => k.close);
-            const rsi = technicalindicators.rsi({ values: h4Closes, period: 14 });
-            const latestRSI = rsi[rsi.length - 1];
-            const prevRSI = rsi[rsi.length - 2];
-            if (latestRSI > 30 && prevRSI <= 30) return { tradeType: "شراء" };
-            if (latestRSI < 70 && prevRSI >= 70) return { tradeType: "بيع" };
-            return { tradeType: "محايد" };
-        }
-
-        // --- محرك الاختبار الخلفي الموحد ---
-        async function runBacktest(h4Klines, dailyKlines, strategyLogic) {
-            const trades = []; let activeTrade = null; const minAnalysisCandles = 250;
-            for (let i = minAnalysisCandles; i < h4Klines.length; i++) {
-                const currentH4Klines = h4Klines.slice(0, i + 1);
-                const currentCandle = currentH4Klines[currentH4Klines.length - 1];
-                const correspondingDailyIndex = dailyKlines.findIndex(dk => dk.timestamp >= currentCandle.timestamp) -1;
-                if (correspondingDailyIndex < minAnalysisCandles) continue;
-                const currentDailyKlines = dailyKlines.slice(0, correspondingDailyIndex + 1);
-                if (activeTrade) {
-                    let pnl = 0;
-                    if (activeTrade.type === 'Long') pnl = (currentCandle.close - activeTrade.entryPoint) / activeTrade.entryPoint;
-                    else pnl = (activeTrade.entryPoint - currentCandle.close) / activeTrade.entryPoint;
-                    
-                    const signal = strategyLogic(currentH4Klines, currentDailyKlines);
-                    if ((activeTrade.type === 'Long' && signal.tradeType === 'بيع') || (activeTrade.type === 'بيع' && signal.tradeType === 'شراء')) {
-                        trades.push({ pnl });
-                        activeTrade = null;
-                    }
-                }
-                if (!activeTrade) {
-                    const signal = strategyLogic(currentH4Klines, currentDailyKlines);
-                    if (signal.tradeType === 'شراء') activeTrade = { type: 'Long', entryPoint: currentCandle.close };
-                    else if (signal.tradeType === 'بيع') activeTrade = { type: 'Short', entryPoint: currentCandle.close };
-                }
-            }
-            return generateReport(trades);
-        }
-        
-        // --- دوال مساعدة (معدلة وموجودة من قبل) ---
-        function generateReport(trades) {
-            const totalTrades = trades.length;
-            if (totalTrades === 0) return { totalTrades: 0, winRate: "0.00", netProfit: 0, profitFactor: "N/A" };
-            const winningTrades = trades.filter(t => t.pnl > 0);
-            const losingTrades = trades.filter(t => t.pnl <= 0);
-            const grossProfit = winningTrades.reduce((sum, t) => sum + t.pnl, 0);
-            const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + t.pnl, 0));
-            const netProfit = grossProfit - grossLoss;
-            const profitFactor = (grossLoss > 0) ? (grossProfit / grossLoss).toFixed(2) : "∞";
-            return {
-                totalTrades,
-                winRate: ((winningTrades.length / totalTrades) * 100).toFixed(2),
-                netProfit: netProfit,
-                profitFactor: profitFactor
-            };
-        }
+        async function runCompetition() { this.textContent = 'جاري الاختبار...'; this.disabled = true; try { const dailyKlines = await getHistoricalData('BTCUSDT', '1d', 1000); const h4Klines = await getHistoricalData('BTCUSDT', '4h', 1000); for (const strategy of strategies) { const report = await runBacktest(h4Klines, dailyKlines, strategy.logic); strategy.report = report; } displayResults(); } catch (error) { alert(`حدث خطأ: ${error.message}`); this.textContent = 'بدء المنافسة'; this.disabled = false; } }
+        function displayResults() { arenaDiv.innerHTML = ''; let bestStrategy = strategies[0]; for (const strategy of strategies) { if (strategy.report.netProfit > bestStrategy.report.netProfit) { bestStrategy = strategy; } } for (const strategy of strategies) { const isWinner = strategy.id === bestStrategy.id; const isLoser = !isWinner && strategy.report.netProfit < 0; const card = document.createElement('div'); card.className = `card strategy-card ${isWinner ? 'winner' : ''} ${isLoser ? 'loser' : ''}`; const report = strategy.report; card.innerHTML = `<h3>${strategy.name}</h3><p style="font-size:0.8rem; color:#aaa;">${strategy.description}</p><hr style="border-color: #434651;"><div class="report-grid"><div class="report-item"><h4>إجمالي الصفقات</h4><p>${report.totalTrades}</p></div><div class="report-item"><h4>نسبة النجاح</h4><p>${report.winRate}%</p></div><div class="report-item"><h4>الربح/الخسارة (كنسبة)</h4><p class="${report.netProfit >= 0 ? 'buy' : 'sell'}">${(report.netProfit * 100).toFixed(2)}%</p></div><div class="report-item"><h4>عامل الربح</h4><p>${report.profitFactor}</p></div></div>`; arenaDiv.appendChild(card); } finalDecisionDiv.classList.remove('hidden'); const decisionText = document.getElementById('decision-text'); if (bestStrategy.report.netProfit > 0) { decisionText.innerHTML = `**الاستراتيجية الفائزة هي "${bestStrategy.name}".**   
+ لقد أثبتت أنها الأكثر ربحية على البيانات التاريخية. سيتم اعتماد هذه الاستراتيجية وحذف الاستراتيجيات الأخرى الفاشلة من الإصدارات القادمة.`; } else { decisionText.innerHTML = `**تحذير: لم تنجح أي استراتيجية في تحقيق ربح.**   
+ جميع الاستراتيجيات التي تم اختبارها أدت إلى خسارة. هذا يعني أن ظروف السوق الحالية غير مناسبة لهذه الأنظمة ويجب إعادة النظر فيها بالكامل.`; } }
+        function analyzeConservative(h4Klines, dailyKlines) { const params = { ciPeriod: 14, cmfPeriod: 20 }; const ciValues = choppinessIndex(h4Klines, params.ciPeriod); if (ciValues[ciValues.length - 1] > 61.8) return { tradeType: "محايد" }; const dailyCloses = dailyKlines.map(k => k.close); const hma55 = hma(dailyCloses, 55); const dailyTrend = dailyCloses[dailyCloses.length - 1] > hma55[hma55.length - 1] ? 'صاعد' : 'هابط'; const h4Closes = h4Klines.map(k => k.close); const superTrend = analyzeSuperTrend(h4Klines); const stcValues = stc(h4Closes, 12, 26, 10); const latestSTC = stcValues[stcValues.length - 1], prevSTC = stcValues[stcValues.length - 2]; const entrySignal = (latestSTC > 25 && prevSTC <= 25), exitSignal = (latestSTC < 75 && prevSTC >= 75); const cmfInput = { high: h4Klines.map(k => k.high), low: h4Klines.map(k => k.low), close: h4Klines.map(k => k.close), volume: h4Klines.map(k => k.volume), period: params.cmfPeriod }; const cmfValues = technicalindicators.chaikinmoneyflow(cmfInput); const latestCMF = cmfValues[cmfValues.length - 1]; if ((entrySignal && latestCMF < 0) || (exitSignal && latestCMF > 0)) return { tradeType: "محايد" }; if (dailyTrend === 'صاعد' && superTrend.trend === 'صاعد' && entrySignal) return { tradeType: "شراء" }; if (dailyTrend === 'هابط' && superTrend.trend === 'هابط' && exitSignal) return { tradeType: "بيع" }; return { tradeType: "محايد" }; }
+        function analyzeTrendRider(h4Klines, dailyKlines) { const dailyCloses = dailyKlines.map(k => k.close); const hma55 = hma(dailyCloses, 55); const dailyTrend = dailyCloses[dailyCloses.length - 1] > hma55[hma55.length - 1] ? 'صاعد' : 'هابط'; const h4Closes = h4Klines.map(k => k.close); const superTrend = analyzeSuperTrend(h4Klines); const stcValues = stc(h4Closes, 12, 26, 10); const latestSTC = stcValues[stcValues.length - 1], prevSTC = stcValues[stcValues.length - 2]; const entrySignal = (latestSTC > 25 && prevSTC <= 25), exitSignal = (latestSTC < 75 && prevSTC >= 75); if (dailyTrend === 'صاعد' && superTrend.trend === 'صاعد' && entrySignal) return { tradeType: "شراء" }; if (dailyTrend === 'هابط' && superTrend.trend === 'هابط' && exitSignal) return { tradeType: "بيع" }; return { tradeType: "محايد" }; }
+        function analyzeReversalHunter(h4Klines, dailyKlines) { const h4Closes = h4Klines.map(k => k.close); const rsi = technicalindicators.rsi({ values: h4Closes, period: 14 }); const latestRSI = rsi[rsi.length - 1]; const prevRSI = rsi[rsi.length - 2]; if (latestRSI > 30 && prevRSI <= 30) return { tradeType: "شراء" }; if (latestRSI < 70 && prevRSI >= 70) return { tradeType: "بيع" }; return { tradeType: "محايد" }; }
+        async function runBacktest(h4Klines, dailyKlines, strategyLogic) { const trades = []; let activeTrade = null; const minAnalysisCandles = 250; for (let i = minAnalysisCandles; i < h4Klines.length; i++) { const currentH4Klines = h4Klines.slice(0, i + 1); const currentCandle = currentH4Klines[currentH4Klines.length - 1]; const correspondingDailyIndex = dailyKlines.findIndex(dk => dk.timestamp >= currentCandle.timestamp) -1; if (correspondingDailyIndex < minAnalysisCandles) continue; const currentDailyKlines = dailyKlines.slice(0, correspondingDailyIndex + 1); if (activeTrade) { let pnl = 0; if (activeTrade.type === 'Long') pnl = (currentCandle.close - activeTrade.entryPoint) / activeTrade.entryPoint; else pnl = (activeTrade.entryPoint - currentCandle.close) / activeTrade.entryPoint; const signal = strategyLogic(currentH4Klines, currentDailyKlines); if ((activeTrade.type === 'Long' && signal.tradeType === 'بيع') || (activeTrade.type === 'بيع' && signal.tradeType === 'شراء')) { trades.push({ pnl }); activeTrade = null; } } if (!activeTrade) { const signal = strategyLogic(currentH4Klines, currentDailyKlines); if (signal.tradeType === 'شراء') activeTrade = { type: 'Long', entryPoint: currentCandle.close }; else if (signal.tradeType === 'بيع') activeTrade = { type: 'Short', entryPoint: currentCandle.close }; } } return generateReport(trades); }
+        function generateReport(trades) { const totalTrades = trades.length; if (totalTrades === 0) return { totalTrades: 0, winRate: "0.00", netProfit: 0, profitFactor: "N/A" }; const winningTrades = trades.filter(t => t.pnl > 0); const losingTrades = trades.filter(t => t.pnl <= 0); const grossProfit = winningTrades.reduce((sum, t) => sum + t.pnl, 0); const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + t.pnl, 0)); const netProfit = grossProfit - grossLoss; const profitFactor = (grossLoss > 0) ? (grossProfit / grossLoss).toFixed(2) : "∞"; return { totalTrades, winRate: ((winningTrades.length / totalTrades) * 100).toFixed(2), netProfit: netProfit, profitFactor: profitFactor }; }
         async function getHistoricalData(symbol, interval, limit) { const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`; const response = await fetch(url ); if (!response.ok) throw new Error(`فشل جلب بيانات ${interval}.`); const data = await response.json(); return data.map(k => ({ open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]), volume: parseFloat(k[5]), timestamp: k[0] })); }
         function hma(data, period) { const wma = technicalindicators.wma; const halfPeriod = Math.floor(period / 2); const sqrtPeriod = Math.floor(Math.sqrt(period)); const wma1 = wma({ period: halfPeriod, values: data }); const wma2 = wma({ period: period, values: data }); const diff = wma1.map((val, index) => { const wma2_val = wma2[index - (halfPeriod - 1)] || 0; return (2 * val) - wma2_val; }); const validDiff = diff.slice(period - halfPeriod); return wma({ period: sqrtPeriod, values: validDiff }); } function stc(data, fastPeriod, slowPeriod, stochPeriod) { const macd = technicalindicators.macd({ values: data, fastPeriod, slowPeriod, signalPeriod: 1, SimpleMAOscillator: false, SimpleMASignal: false }).map(d => d.MACD); const highestMACD = technicalindicators.highest({ values: macd, period: stochPeriod }); const lowestMACD = technicalindicators.lowest({ values: macd, period: stochPeriod }); const stochMACD = macd.map((val, index) => { const H = highestMACD[index - (stochPeriod - 1)] || 0; const L = lowestMACD[index - (stochPeriod - 1)] || 0; return ((val - L) / (H - L)) * 100 || 0; }); const ema = technicalindicators.ema; const ema1 = ema({ period: 3, values: stochMACD }); const ema2 = ema({ period: 3, values: ema1 }); return ema2; } function choppinessIndex(klines, period) { if (klines.length < period) return []; const atr = technicalindicators.atr({ high: klines.map(k=>k.high), low: klines.map(k=>k.low), close: klines.map(k=>k.close), period: 1 }); const results = []; for (let i = period - 1; i < klines.length; i++) { const slice = klines.slice(i - period + 1, i + 1); const atrSum = atr.slice(i - period + 1, i + 1).reduce((sum, val) => sum + val, 0); const highestHigh = Math.max(...slice.map(k => k.high)); const lowestLow = Math.min(...slice.map(k => k.low)); const range = highestHigh - lowestLow; if (range === 0) { results.push(100); continue; } const logTerm = Math.log10(atrSum / range); const periodLog = Math.log10(period); const ci = 100 * (logTerm / periodLog); results.push(ci); } return results; } function analyzeSuperTrend(klines, period = 10, multiplier = 3) { if (klines.length < period) return { trend: 'محايد' }; let atrValues = technicalindicators.atr({ high: klines.map(k => k.high), low: klines.map(k => k.low), close: klines.map(k => k.close), period: period }); let finalUpperBand = 0, finalLowerBand = 0, supertrend = 0, direction = 'صاعد'; for (let i = period; i < klines.length; i++) { let high = klines[i].high, low = klines[i].low, close = klines[i].close, prevClose = klines[i-1].close, atr = atrValues[i - period]; let upperBand = (high + low) / 2 + (multiplier * atr); let lowerBand = (high + low) / 2 - (multiplier * atr); finalUpperBand = (upperBand < finalUpperBand || prevClose > finalUpperBand) ? upperBand : finalUpperBand; finalLowerBand = (lowerBand > finalLowerBand || prevClose < finalLowerBand) ? lowerBand : finalLowerBand; if (supertrend === finalUpperBand) { direction = close > finalUpperBand ? 'صاعد' : 'هابط'; } else { direction = close < finalLowerBand ? 'هابط' : 'صاعد'; } supertrend = (direction === 'صاعد') ? finalLowerBand : finalUpperBand; } const trend = klines[klines.length-1].close > supertrend ? 'صاعد' : 'هابط'; return { trend: trend }; }
+
     </script>
 </body>
 </html>
